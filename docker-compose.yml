@@ -1,0 +1,24 @@
+version: '3.1'
+
+services:
+  mongo:
+    image: mongo:4.2
+    hostname: $RS
+    container_name: $RS
+    command: mongod --replSet $RS
+    restart: always
+    volumes:
+      - ./mongod/db:/data/db
+    ports:
+      - 27017:27017
+  mongo_config:
+    image: mongo:4.2
+    hostname: rsc
+    container_name: rsc
+    depends_on:
+      - mongo
+    command: config
+    volumes:
+      - ./mongo-config.sh:/bin/config
+    env_file:
+      - .env
