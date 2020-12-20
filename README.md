@@ -3,6 +3,6 @@
 - $RS
 - $DB_HOST
 - $USER
-- PASSWORD
-- DB
-- DBNAME
+- $PASSWORD
+- $DB
+- $DBNAME
