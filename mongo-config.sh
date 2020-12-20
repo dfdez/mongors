@@ -24,7 +24,7 @@ do
   mongo --host $RS config.js
 done
 
-if [ ! -z $DB_HOST || ! -z $USER || ! -z $PASSWORD || ! -z $DB ]; then
+if [ ! -z $DB_HOST ] || [ ! -z $USER ] || [ ! -z $PASSWORD ] || [ ! -z $DB ]; then
   mongodump \
   --host $DB_HOST \
   --ssl \
