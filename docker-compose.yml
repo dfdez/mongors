@@ -15,8 +15,6 @@ services:
     image: mongo:4.2
     hostname: rsc
     container_name: rsc
-    depends_on:
-      - mongo
     command: config
     volumes:
       - ./mongo-config.sh:/bin/config

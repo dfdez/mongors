@@ -10,7 +10,10 @@ config = {
   ]
 }
 
-rs.initiate(config)
+rs_status = db.adminCommand({ replSetGetStatus : 1 }).ok
+
+if (rs_status) rs.reconfig(config, { force: true })
+else rs.initiate(config)
 EOF
 
 mongo --host $RS --port $PORT config.js
