@@ -8,7 +8,7 @@ services:
     command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017}
     restart: always
     volumes:
-      - ./mongod/db:/data/db
+      - ./data/db:/data/db
     ports:
       - 27017:${PORT:-27017}
   mongo_config:
