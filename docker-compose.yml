@@ -2,7 +2,7 @@ version: '3.1'
 
 services:
   mongo:
-    image: mongo:4.2
+    image: mongo:4.4
     hostname: ${RS:-rs0}
     container_name: ${RS:-rs0}
     command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017}
@@ -12,7 +12,7 @@ services:
     ports:
       - 27017:${PORT:-27017}
   mongo_config:
-    image: mongo:4.2
+    image: mongo:4.4
     hostname: rsc
     container_name: rsc
     command: config
