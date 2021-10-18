@@ -1,16 +1,30 @@
 version: '3.1'
 
 services:
-  mongo:
+  mongo_rs0:
     image: mongo:4.4
-    hostname: ${RS:-rs0}
-    container_name: ${RS:-rs0}
-    command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017}
+    hostname: ${RS_0:-rs0}
+    container_name: ${RS_0:-rs0}
+    command: mongod --replSet rs0
     restart: always
-    volumes:
-      - ./data/db:/data/db
     ports:
-      - 27017:${PORT:-27017}
+      - ${PORT:-27017}:${PORT:-27017}
+  mongo_rs1:
+    image: mongo:4.4
+    hostname: ${RS_1:-rs1}
+    container_name: ${RS_1:-rs1}
+    command: mongod --replSet rs0 --port 27018
+    restart: always
+    ports:
+      - ${PORT:-27018}:${PORT:-27018}
+  mongo_rs2:
+    image: mongo:4.4
+    hostname: ${RS_2:-rs2}
+    container_name: ${RS_2:-rs2}
+    command: mongod --replSet rs0 --port 27019
+    restart: always
+    ports:
+      - ${PORT:-27019}:${PORT:-27019}
   mongo_config:
     image: mongo:4.4
     hostname: rsc

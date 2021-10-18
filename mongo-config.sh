@@ -3,12 +3,23 @@
 [ -z $HOST ] && HOST=127.0.0.1
 [ -z $PORT ] && PORT=27017
 
+echo "Starting replica set initialization"
+until mongo --host $RS --port $PORT --eval "print(\"Waited for connection\")"
+do
+  echo "Server seems down retrying"
+  sleep 2
+done
+echo "Connection finished"
+
+echo "Creating replica set"
 # Prepare the config script to active replica set
 cat << EOF > config.js
 config = {
-  _id : "$RS",
+  _id : "rs0",
   members: [
-    { _id: 0, host: "$HOST:$PORT" }
+    { _id: 0, host: "rs0:27017" },
+    { _id: 1, host: "rs1:27018" },
+    { _id: 2, host: "rs2:27019" }
   ]
 }
 
@@ -20,12 +31,7 @@ EOF
 
 # Try to run the script in mongo and retry In case mongo still isn't running
 mongo --host $RS --port $PORT config.js
-while [ $? != 0 ]
-do
-  echo "Server seems down retrying"
-  sleep 1
-  mongo --host $RS --port $PORT config.js
-done
+echo "Replica set created"
 
 # If $DB_HOST, $USER, $PASSWORD and $DB variables are setted, try to restore this database
 if [ ! -z $DB_HOST ] || [ ! -z $USER ] || [ ! -z $PASSWORD ] || [ ! -z $DB ]; then
