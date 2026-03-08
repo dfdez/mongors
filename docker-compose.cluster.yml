@@ -1,0 +1,47 @@
+services:
+  mongo1:
+    image: mongo:4.4
+    hostname: mongo1
+    container_name: mongo1
+    command: mongod --replSet ${RS:-rs0} --port 27017 --bind_ip_all
+    restart: always
+    volumes:
+      - ./data/db1:/data/db
+    ports:
+      - "27017:27017"
+
+  mongo2:
+    image: mongo:4.4
+    hostname: mongo2
+    container_name: mongo2
+    command: mongod --replSet ${RS:-rs0} --port 27018 --bind_ip_all
+    restart: always
+    volumes:
+      - ./data/db2:/data/db
+    ports:
+      - "27018:27018"
+
+  mongo3:
+    image: mongo:4.4
+    hostname: mongo3
+    container_name: mongo3
+    command: mongod --replSet ${RS:-rs0} --port 27019 --bind_ip_all
+    restart: always
+    volumes:
+      - ./data/db3:/data/db
+    ports:
+      - "27019:27019"
+
+  mongo_config:
+    image: mongo:4.4
+    hostname: rsc
+    container_name: rsc
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    command: sh /bin/config
+    volumes:
+      - ./mongo-config.cluster.sh:/bin/config
+    environment:
+      - RS=${RS:-rs0}
