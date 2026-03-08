@@ -1,22 +1,30 @@
-version: '3.1'
-
 services:
   mongo:
     image: mongo:4.4
     hostname: ${RS:-rs0}
     container_name: ${RS:-rs0}
-    command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017}
+    command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017} --bind_ip_all
     restart: always
     volumes:
       - ./data/db:/data/db
     ports:
-      - 27017:${PORT:-27017}
+      - "${PORT:-27017}:${PORT:-27017}"
+
   mongo_config:
     image: mongo:4.4
     hostname: rsc
     container_name: rsc
-    command: config
+    depends_on:
+      - mongo
+    command: sh /bin/config
     volumes:
       - ./mongo-config.sh:/bin/config
-    env_file:
-      - .env
+    environment:
+      - RS=${RS:-rs0}
+      - HOST=${HOST:-127.0.0.1}
+      - PORT=${PORT:-27017}
+      - DB_HOST=${DB_HOST:-}
+      - USER=${USER:-}
+      - PASSWORD=${PASSWORD:-}
+      - DB=${DB:-}
+      - DBNAME=${DBNAME:-}
