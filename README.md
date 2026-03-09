@@ -1,42 +1,92 @@
-# Documentation
-A simple docker-compose file to run a mongodb database in docker with replica set on.
-## How to run mongodb with replicaset in docker:
-You will need to install [docker]('https://www.docker.com/products/docker-desktop') and [docker-compose]('https://docs.docker.com/compose/install/')
+# MongoDB Replica Set (mongors)
 
-```zsh
-git clone https://github.com/dfdez/mongors.git
+A simple, containerized setup to run a 3-Node MongoDB Replica Set locally using Docker Compose. It also includes an initialization script to automatically clone and restore a remote database on startup.
 
-cd mongors
+## Features
+
+- **3-Node Cluster**: Instantly spin up a functional 3-node MongoDB replica set (`rs0` by default).
+- **Auto-Restore**: Automatically pull and restore a database from a remote host on startup using `mongodump` and `mongorestore`.
+- **Fully Configurable**: Easily override the replica set name, ports, and database credentials using environment variables.
+- **Dynamic Topology**: The initialization script adapts automatically to any number of nodes defined in your compose configuration.
+
+## Prerequisites
+
+- [Docker](https://www.docker.com/products/docker-desktop)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+## Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/dfdez/mongors.git
+   cd mongors
+   ```
+
+2. **Configure Environment Variables (Optional):**
+   You can customize your MongoDB setup by creating an `.env` file in the root directory. If no `.env` file is provided, default values are used.
+
+   **Replica Set Configuration:**
+   - `RS`: The replica set name (Default: `rs0`)
+   - `PORT`: The port for the primary node `mongo1` (Default: `27017`)
+   - `PORT2`: The port for secondary node `mongo2` (Default: `27018`)
+   - `PORT3`: The port for secondary node `mongo3` (Default: `27019`)
+   - `MONGO_NODES`: The list of comma-separated nodes to initialize (Default: `mongo1:${PORT},mongo2:${PORT2},mongo3:${PORT3}`)
+
+   *(See below for database clone configuration)*
+
+3. **Start the cluster:**
+   ```bash
+   docker compose up -d
+   ```
+   
+   You can monitor the initialization script to see when the setup is complete:
+   ```bash
+   docker compose logs -f mongo_config
+   ```
+
+## Networking
+
+Because the MongoDB driver will discover the replica set topology using the Docker container names (`mongo1`, `mongo2`, `mongo3`), your host machine must be able to resolve these names to connect to the full replica set properly from outside Docker.
+
+You must add the following line to your host machine's `/etc/hosts` file (or `C:\Windows\System32\drivers\etc\hosts` on Windows):
+```text
+127.0.0.1 mongo1 mongo2 mongo3
 ```
-Before running the containers you can add the `.env` file where you can:
-- Change de default configuration with this variables:
-  - `$RS` -> The replicas set name (Default: rs0)
-  - `$HOST` -> The replica set host (Default: 127.0.0.1)
-  - `$PORT` -> Teh replica set port (Default: 27017)
-- Add configuration to automatic clone a database with this variables:
-  - `$DB_HOST` -> Host where download the database
-  - `$USER` -> A username who has access to the database
-  - `$PASSWORD` -> The password of the given $USER
-  - `$DB` -> The name of the database that we want to clone
-  - `$DBNAME` -> To change the name of the database to restore
+After doing this, you can connect from your local machine using:
+`mongodb://mongo1:27017,mongo2:27018,mongo3:27019/?replicaSet=rs0`
 
-Once you have all the env variables configured you can run the containers with:
-```zsh
-docker-compose up -d
+*(Alternatively, if you skip the hosts file edit, you can connect to the primary directly using `mongodb://127.0.0.1:27017/?directConnection=true`)*
 
-# You can see what the script is doing by running:
-docker-compose logs -f
+## Adding More Nodes
+
+If you need a 4th node or more, you can simply add a new service to `docker-compose.yml` using the provided YAML anchor and update the `MONGO_NODES` environment variable.
+
+The `mongo-config.sh` script dynamically parses this variable and builds the replica set JSON configuration without any code changes needed in the script itself.
+
+## Automatic Database Clone Configuration
+
+If you want to clone an existing remote database during startup, provide the following variables in your `.env` file:
+- `DB_HOST`: The remote host from which to download the database.
+- `USER`: The username with access to the remote database.
+- `PASSWORD`: The password for the specified user.
+- `DB`: The name of the remote database to clone.
+- `DBNAME`: *(Optional)* The name to use when restoring the database locally. If not set, it defaults to `$DB`.
+
+## Resetting the Database
+
+If you want to completely wipe your local database data and start fresh:
+
+```bash
+# 1. Stop and remove the containers
+docker compose down
+
+# 2. Delete the local data folders
+sudo rm -rf data/
+
+# 3. Restart the containers
+docker compose up -d
 ```
-Just wait until the script finish the configuration and you are ready to go!
 
-## If you want to reset your database:
-```zsh
-# Stop the container
-docker-compose stop
+## Contributing
 
-# Delete the folder with the database information
-rm -r data
-
-# Rerun the container
-docker-compose restart
-```
+Feel free to submit an issue or open a pull request if you want to improve this tool or find any bugs.

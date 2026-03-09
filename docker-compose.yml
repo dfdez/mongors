@@ -1,22 +1,54 @@
-version: '3.1'
+x-mongo-common: &mongo-common
+  image: mongo:${MONGO_VERSION:-4.4}
+  restart: always
 
 services:
-  mongo:
-    image: mongo:4.4
-    hostname: ${RS:-rs0}
-    container_name: ${RS:-rs0}
-    command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017}
-    restart: always
+  mongo1:
+    <<: *mongo-common
+    hostname: mongo1
+    container_name: mongo1
+    command: mongod --replSet ${RS:-rs0} --port ${PORT:-27017} --bind_ip_all
     volumes:
-      - ./data/db:/data/db
+      - ./data/db1:/data/db
     ports:
-      - 27017:${PORT:-27017}
+      - "${PORT:-27017}:${PORT:-27017}"
+
+  mongo2:
+    <<: *mongo-common
+    hostname: mongo2
+    container_name: mongo2
+    command: mongod --replSet ${RS:-rs0} --port ${PORT2:-27018} --bind_ip_all
+    volumes:
+      - ./data/db2:/data/db
+    ports:
+      - "${PORT2:-27018}:${PORT2:-27018}"
+
+  mongo3:
+    <<: *mongo-common
+    hostname: mongo3
+    container_name: mongo3
+    command: mongod --replSet ${RS:-rs0} --port ${PORT3:-27019} --bind_ip_all
+    volumes:
+      - ./data/db3:/data/db
+    ports:
+      - "${PORT3:-27019}:${PORT3:-27019}"
+
   mongo_config:
-    image: mongo:4.4
+    image: mongo:${MONGO_VERSION:-4.4}
     hostname: rsc
     container_name: rsc
-    command: config
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+    command: sh /bin/config
     volumes:
       - ./mongo-config.sh:/bin/config
-    env_file:
-      - .env
+    environment:
+      - RS=${RS:-rs0}
+      - MONGO_NODES=${MONGO_NODES:-mongo1:${PORT:-27017},mongo2:${PORT2:-27018},mongo3:${PORT3:-27019}}
+      - DB_HOST=${DB_HOST:-}
+      - USER=${USER:-}
+      - PASSWORD=${PASSWORD:-}
+      - DB=${DB:-}
+      - DBNAME=${DBNAME:-}
