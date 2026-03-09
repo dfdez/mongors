@@ -7,6 +7,7 @@ A simple, containerized setup to run a 3-Node MongoDB Replica Set locally using 
 - **3-Node Cluster**: Instantly spin up a functional 3-node MongoDB replica set (`rs0` by default).
 - **Auto-Restore**: Automatically pull and restore a database from a remote host on startup using `mongodump` and `mongorestore`.
 - **Fully Configurable**: Easily override the replica set name, ports, and database credentials using environment variables.
+- **Dynamic Topology**: The initialization script adapts automatically to any number of nodes defined in your compose configuration.
 
 ## Prerequisites
 
@@ -29,6 +30,7 @@ A simple, containerized setup to run a 3-Node MongoDB Replica Set locally using 
    - `PORT`: The port for the primary node `mongo1` (Default: `27017`)
    - `PORT2`: The port for secondary node `mongo2` (Default: `27018`)
    - `PORT3`: The port for secondary node `mongo3` (Default: `27019`)
+   - `MONGO_NODES`: The list of comma-separated nodes to initialize (Default: `mongo1:${PORT},mongo2:${PORT2},mongo3:${PORT3}`)
 
    *(See below for database clone configuration)*
 
@@ -54,6 +56,12 @@ After doing this, you can connect from your local machine using:
 `mongodb://mongo1:27017,mongo2:27018,mongo3:27019/?replicaSet=rs0`
 
 *(Alternatively, if you skip the hosts file edit, you can connect to the primary directly using `mongodb://127.0.0.1:27017/?directConnection=true`)*
+
+## Adding More Nodes
+
+If you need a 4th node or more, you can simply add a new service to `docker-compose.yml` using the provided YAML anchor and update the `MONGO_NODES` environment variable.
+
+The `mongo-config.sh` script dynamically parses this variable and builds the replica set JSON configuration without any code changes needed in the script itself.
 
 ## Automatic Database Clone Configuration
 
