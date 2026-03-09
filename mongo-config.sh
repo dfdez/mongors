@@ -2,22 +2,29 @@
 
 # Default variable values if not set
 RS=${RS:-rs0}
-HOST=${HOST:-127.0.0.1}
-PORT=${PORT:-27017}
-PORT2=${PORT2:-27018}
-PORT3=${PORT3:-27019}
+MONGO_NODES=${MONGO_NODES:-"mongo1:${PORT:-27017},mongo2:${PORT2:-27018},mongo3:${PORT3:-27019}"}
 
-echo "Initializing 3-Node Replica Set: ${RS}"
+echo "Initializing Replica Set: ${RS} with nodes: ${MONGO_NODES}"
 
-# Prepare the config script to activate the 3-node replica set
+# Generate members JSON array dynamically
+MEMBERS=""
+ID=0
+
+# Use tr to replace commas with spaces instead of changing IFS
+for NODE in $(echo "$MONGO_NODES" | tr ',' ' '); do
+  MEMBERS="$MEMBERS,
+    { _id: $ID, host: \"$NODE\" }"
+  ID=$((ID + 1))
+done
+
+# Remove the leading comma and newline
+MEMBERS=${MEMBERS#,}
+
+# Prepare the config script to activate the replica set
 cat << JS_EOF > config.js
 var config = {
   _id: "$RS",
-  members: [
-    { _id: 0, host: "mongo1:$PORT" },
-    { _id: 1, host: "mongo2:$PORT2" },
-    { _id: 2, host: "mongo3:$PORT3" }
-  ]
+  members: [$MEMBERS]
 };
 
 var rs_status = db.adminCommand({ replSetGetStatus: 1 }).ok;
@@ -30,27 +37,24 @@ if (rs_status) {
 JS_EOF
 
 # Wait for all nodes to be ready
-echo "Waiting for MongoDB to be ready on mongo1:$PORT..."
-while ! mongo --host "mongo1" --port "$PORT" --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-  echo "Node mongo1:$PORT seems down or initializing, retrying in 2 seconds..."
-  sleep 2
+for NODE in $(echo "$MONGO_NODES" | tr ',' ' '); do
+  HOST=$(echo "$NODE" | cut -d: -f1)
+  NODE_PORT=$(echo "$NODE" | cut -d: -f2)
+  echo "Waiting for MongoDB to be ready on $NODE..."
+  while ! mongo --host "$HOST" --port "$NODE_PORT" --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+    echo "Node $NODE seems down or initializing, retrying in 2 seconds..."
+    sleep 2
+  done
 done
 
-echo "Waiting for MongoDB to be ready on mongo2:$PORT2..."
-while ! mongo --host "mongo2" --port "$PORT2" --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-  echo "Node mongo2:$PORT2 seems down or initializing, retrying in 2 seconds..."
-  sleep 2
-done
+# Identify the first node to run the initialization script
+FIRST_NODE=$(echo "$MONGO_NODES" | cut -d, -f1)
+FIRST_HOST=$(echo "$FIRST_NODE" | cut -d: -f1)
+FIRST_PORT=$(echo "$FIRST_NODE" | cut -d: -f2)
 
-echo "Waiting for MongoDB to be ready on mongo3:$PORT3..."
-while ! mongo --host "mongo3" --port "$PORT3" --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-  echo "Node mongo3:$PORT3 seems down or initializing, retrying in 2 seconds..."
-  sleep 2
-done
-
-# Try to run the script in mongo on mongo1 and retry in case it fails
-echo "Applying Replica Set configuration on mongo1:$PORT..."
-while ! mongo --host "mongo1" --port "$PORT" config.js > /dev/null 2>&1; do
+# Try to run the script in mongo on the first node and retry in case it fails
+echo "Applying Replica Set configuration on $FIRST_NODE..."
+while ! mongo --host "$FIRST_HOST" --port "$FIRST_PORT" config.js > /dev/null 2>&1; do
   echo "Failed to apply config, retrying in 2 seconds..."
   sleep 2
 done
@@ -75,7 +79,7 @@ if [ -n "$DB_HOST" ] && [ -n "$USER" ] && [ -n "$PASSWORD" ] && [ -n "$DB" ]; th
   fi
 
   echo "Restoring database to local Replica Set..."
-  mongorestore --host "mongo1" --port "$PORT" dump
+  mongorestore --host "$FIRST_HOST" --port "$FIRST_PORT" dump
 
   echo "Database restoration completed."
 fi
